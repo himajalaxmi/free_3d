@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Solar System</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Click on a planet for information</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script>
+        let scene, camera, renderer, controls;
+        let sun, planets = {};
+
+        const planetData = {
+            mercury: { radius: 0.38, orbit: 5, speed: 0.01, color: 0x8c7c6e },
+            venus: { radius: 0.95, orbit: 7, speed: 0.007, color: 0xffd085 },
+            earth: { radius: 1, orbit: 10, speed: 0.005, color: 0x2b82c9 },
+            mars: { radius: 0.53, orbit: 13, speed: 0.003, color: 0xc1440e },
+            jupiter: { radius: 11.2, orbit: 18, speed: 0.002, color: 0xd8ca9d },
+        };
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Sun
+            const sunGeometry = new THREE.SphereGeometry(3, 32, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            scene.add(sun);
+
+            // Planets
+            for (const [name, data] of Object.entries(planetData)) {
+                const planetGeometry = new THREE.SphereGeometry(data.radius, 32, 32);
+                const planetMaterial = new THREE.MeshPhongMaterial({ color: data.color });
+                const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+                planet.position.x = data.orbit;
+                planets[name] = planet;
+                scene.add(planet);
+            }
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0xffffff, 2, 100);
+            scene.add(pointLight);
+
+            camera.position.z = 50;
+
+            // Event listeners
+            window.addEventListener('resize', onWindowResize, false);
+            document.addEventListener('click', onDocumentClick, false);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate planets
+            for (const [name, data] of Object.entries(planetData)) {
+                const planet = planets[name];
+                planet.rotation.y += 0.01;
+                planet.position.x = Math.cos(Date.now() * data.speed) * data.orbit;
+                planet.position.z = Math.sin(Date.now() * data.speed) * data.orbit;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onDocumentClick(event) {
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(Object.values(planets));
+
+            if (intersects.length > 0) {
+                const planet = intersects[0].object;
+                const planetName = Object.keys(planets).find(key => planets[key] === planet);
+                alert(`You clicked on ${planetName}`);
+            }
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
